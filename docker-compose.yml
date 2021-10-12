@@ -1,0 +1,67 @@
+version: '2'
+
+services:
+  #Go Service 3031 and HTTP 3000
+  grpc:
+    build:
+      context: .
+      dockerfile: ./docker/grpc/Dockerfile
+    env_file: .env
+    volumes:
+      - .:/go/src/gokitgrpc:rw,cached
+      - ./docker/grpc/main.go:/go/src/gokitgrpc/main.go:rw,cached
+    working_dir: /go/src/gokitgrpc
+    environment:
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ADMINUSERNAME: $MONGO_USERNAME
+      ME_CONFIG_MONGODB_ADMINPASSWORD: $MONGO_PASSWORD
+      ME_CONFIG_BASICAUTH_USERNAME: $MONGO_USERNAME
+      ME_CONFIG_BASICAUTH_PASSWORD: $MONGO_PASSWORD
+    ports:
+      - "3031:3031"
+    networks:
+      - gokitgrpc-net
+  http:
+    build:
+      context: .
+      dockerfile: ./docker/http/Dockerfile
+    env_file: .env
+    volumes:
+      - .:/go/src/gokitgrpc:rw,cached
+      - ./docker/http/main.go:/go/src/gokitgrpc/main.go:rw,cached
+    working_dir: /go/src/gokitgrpc
+    environment:
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ADMINUSERNAME: $MONGO_USERNAME
+      ME_CONFIG_MONGODB_ADMINPASSWORD: $MONGO_PASSWORD
+      ME_CONFIG_BASICAUTH_USERNAME: $MONGO_USERNAME
+      ME_CONFIG_BASICAUTH_PASSWORD: $MONGO_PASSWORD
+    ports:
+      - "3000:3000"
+    networks:
+      - gokitgrpc-net
+  mongodb:
+    image: mongo:latest
+    container_name: gokitgrpc_mongodb
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
+      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
+      MONGO_INITDB_DATABASE: $MONGO_DB
+    ports:
+      - 27017:27017
+    expose:
+      - 27017
+    volumes:
+      - gokitgrpcdata:/data/db
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+    networks:
+      - gokitgrpc-net
+
+networks:
+  gokitgrpc-net:
+    driver: bridge
+
+volumes:
+  gokitgrpcdata:
